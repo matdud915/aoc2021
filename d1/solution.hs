@@ -18,7 +18,7 @@ sumThreeConsecutiveElements a = a
 
 getInputNumbers :: IO [Int]
 getInputNumbers = do
-  content <- readFile "input.txt"s
+  content <- readFile "input.txt"
   return $ parseLinesToNumbers $ lines content
 
 main = do
