@@ -56,7 +56,7 @@ decode :: M.Map String String -> String -> Int
 decode m c = read $ f $ words c
   where 
     f :: [String] -> String
-    f (s:ss) = fromMaybe "d" (M.lookup (sort s) m) ++ f ss
+    f (s:ss) = fromMaybe "error" (M.lookup (sort s) m) ++ f ss
     f [] = []
 
 solve :: [String] -> Int
