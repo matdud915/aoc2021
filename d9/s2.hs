@@ -16,48 +16,46 @@ parseInput = map getDigits
     getDigits = map (\x -> read [x])
 
 toIndexed2dMap :: [[Int]] -> M.Map (Int, Int) Int
-toIndexed2dMap list = M.fromList $ toIndexed2dMap' 0 0 list
+toIndexed2dMap list = M.fromList $ fRec' 0 0 list
   where
-    toIndexed2dMap' :: Int -> Int -> [[Int]] -> [((Int,Int), Int)] 
-    toIndexed2dMap' y x ((n:ns):rest) = ((y, x), n) : toIndexed2dMap' y (x+1) (ns:rest)
-    toIndexed2dMap' y x ([]:rest) = toIndexed2dMap' (y+1) 0 rest
-    toIndexed2dMap' _ _ [] = []
+    fRec' :: Int -> Int -> [[Int]] -> [((Int,Int), Int)] 
+    fRec' y x ((n:ns):rest) = ((y, x), n) : fRec' y (x+1) (ns:rest)
+    fRec' y x ([]:rest) = fRec' (y+1) 0 rest
+    fRec' _ _ [] = []
+
+high :: Int
+high = 9
 
 lookupOrHigh :: (Int, Int) -> M.Map (Int, Int) Int -> Int
-lookupOrHigh k m = fromMaybe 9 $ M.lookup k m
+lookupOrHigh k m = fromMaybe high $ M.lookup k m
+
+getNeighbourIndexes :: (Int, Int) -> [(Int, Int)]
+getNeighbourIndexes (y, x) = [(y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)]
 
 lookupNeighbours :: (Int, Int) -> M.Map (Int, Int) Int -> [Int]
-lookupNeighbours (y, x) m = [
-    lookupOrHigh (y - 1, x) m,
-    lookupOrHigh (y + 1, x) m,
-    lookupOrHigh (y , x - 1) m,
-    lookupOrHigh (y , x + 1) m
-  ]
+lookupNeighbours c m = map (`lookupOrHigh` m) $ getNeighbourIndexes c
 
 getLowPoints :: M.Map (Int, Int) Int -> M.Map (Int, Int) Int
-getLowPoints m = getLowPoints' (M.keys m) M.empty
+getLowPoints m = fRec' (M.keys m) M.empty
   where 
     predicate :: Int -> [Int] -> Bool
-    predicate x n = all (\e -> e > x) n
-    getLowPoints' (k:ks) m' = if predicate (lookupOrHigh k m) (lookupNeighbours k m) 
-      then getLowPoints' ks (M.insert k (lookupOrHigh k m) m')
-      else getLowPoints' ks m'
-    getLowPoints' [] m' = m'
+    predicate x n = all (> x) n
+    fRec' (k:ks) m' = if predicate (lookupOrHigh k m) (lookupNeighbours k m) 
+      then fRec' ks $ M.insert k (lookupOrHigh k m) m'
+      else fRec' ks m'
+    fRec' [] m' = m'
 
 getBasin :: (Int, Int) -> M.Map (Int, Int) Int -> Int
 getBasin lp m = snd $ getBasin' lp (m, 0)
   where
     getBasin' :: (Int, Int) -> (M.Map (Int, Int) Int, Int) -> (M.Map (Int, Int) Int, Int)
     getBasin' lp'@(y, x) (m', s) =
-      let
-        testPoint = lookupOrHigh lp' m'
-      in
-        if testPoint == 9
-          then (m', s)
-          else (getBasin' (y + 1, x) . getBasin' (y - 1, x) . getBasin' (y, x - 1) . getBasin' (y, x + 1)) (M.delete lp' m', s + 1)
+      if lookupOrHigh lp' m' == high
+        then (m', s)
+        else foldl (flip getBasin') (M.delete lp' m', s + 1) (getNeighbourIndexes lp')
 
 main = do
   input <- getInput
-  let wholeMap =  toIndexed2dMap $ parseInput input
+  let wholeMap = toIndexed2dMap $ parseInput input
   let lowPoints = getLowPoints wholeMap
   print $ product $ take 3 $ reverse $ sort $ map (`getBasin` wholeMap) (M.keys lowPoints)
